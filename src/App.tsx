@@ -1707,12 +1707,6 @@ export default function App() {
     setIsSubscribing(true);
     setSubscribeError('');
     try {
-      // Save to Firestore
-      await setDoc(doc(db, 'newsletter_subscriptions', newsletterEmail), {
-        email: newsletterEmail,
-        subscribedAt: serverTimestamp()
-      });
-      // Send to Mailchimp via backend
       const res = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
