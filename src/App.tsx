@@ -1188,6 +1188,7 @@ const Dashboard = ({ user }: { user: FirebaseUser }) => {
                   </div>
                 </div>
               </motion.div>
+              )
             ) : (
               <div className="h-[600px] border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center justify-center text-center p-12">
                 <BarChart3 className="w-10 h-10 text-white/20 mb-6" />

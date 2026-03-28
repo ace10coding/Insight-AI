@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = 5000;
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
 app.use(express.json());
