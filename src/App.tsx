@@ -290,55 +290,117 @@ const Hero = ({ onStart }: { onStart: () => void }) => (
   </div>
 );
 
-const Pricing = ({ onSelect }: { onSelect: (plan: any) => void }) => (
-  <section id="pricing" className="py-24 px-4 bg-white/2">
-    <div className="max-w-7xl mx-auto">
-      <div className="text-center mb-16">
-        <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Better Features. Better Price.</h2>
-        <p className="text-white/60">Why pay $99/mo for Outlierkit when you can get more for less?</p>
-      </div>
+const PLANS = [
+  {
+    name: 'Starter',
+    monthlyPrice: 0,
+    annualPrice: 0,
+    features: ['3 Analyses/day', 'Basic Tag Generator', 'SEO Score', 'Chrome Extension'],
+    cta: 'Get Started Free',
+  },
+  {
+    name: 'Pro',
+    monthlyPrice: 17,
+    annualPrice: 10,
+    annualTotal: 120,
+    popular: true,
+    features: ['Unlimited Analysis', 'Competitor Outliers', 'AI Title Optimizer', 'Thumbnail A/B Strategy', 'Priority Support'],
+    cta: 'Start Pro',
+  },
+  {
+    name: 'Agency',
+    monthlyPrice: 47,
+    annualPrice: 28,
+    annualTotal: 336,
+    features: ['Multi-channel Support', 'Team Collaboration', 'API Access', 'Custom Reports', 'Dedicated Manager'],
+    cta: 'Start Agency',
+  },
+];
 
-      <div className="grid md:grid-cols-3 gap-8">
-        {[
-          { name: 'Starter', price: '0', features: ['3 Analysis/day', 'Basic Tag Generator', 'SEO Score', 'Chrome Extension'] },
-          { name: 'Pro', price: '17', popular: true, features: ['Unlimited Analysis', 'Competitor Outliers', 'AI Title Optimizer', 'Thumbnail A/B Strategy', 'Priority Support'] },
-          { name: 'Agency', price: '47', features: ['Multi-channel Support', 'Team Collaboration', 'API Access', 'Custom Reports', 'Dedicated Manager'] }
-        ].map((plan) => (
-          <div 
-            key={plan.name}
-            className={cn(
-              "p-8 rounded-3xl border transition-all duration-300",
-              plan.popular ? "bg-orange-500/10 border-orange-500/50 scale-105" : "bg-white/5 border-white/10"
-            )}
-          >
-            <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
-            <div className="flex items-baseline gap-1 mb-6">
-              <span className="text-4xl font-bold text-white">${plan.price}</span>
-              <span className="text-white/40">/month</span>
-            </div>
-            <ul className="space-y-4 mb-8">
-              {plan.features.map(f => (
-                <li key={f} className="flex items-center gap-3 text-sm text-white/80">
-                  <CheckCircle2 className="w-4 h-4 text-orange-500" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <button 
-              onClick={() => onSelect(plan)}
+const Pricing = ({ onSelect }: { onSelect: (plan: any) => void }) => {
+  const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
+  return (
+    <section id="pricing" className="py-24 px-4 bg-white/2">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Better Features. Better Price.</h2>
+          <p className="text-white/60 mb-8">Why pay $49+/mo for Outlierkit when you can get more for less?</p>
+          {/* Billing toggle */}
+          <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-2xl p-1 gap-1">
+            <button
+              onClick={() => setBilling('monthly')}
               className={cn(
-                "w-full py-3 rounded-xl font-bold transition-all",
-                plan.popular ? "bg-orange-500 text-white hover:bg-orange-600" : "bg-white/10 text-white hover:bg-white/20"
+                "px-6 py-2 rounded-xl text-sm font-bold transition-all",
+                billing === 'monthly' ? "bg-white text-black" : "text-white/50 hover:text-white"
+              )}
+            >Monthly</button>
+            <button
+              onClick={() => setBilling('annual')}
+              className={cn(
+                "px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2",
+                billing === 'annual' ? "bg-white text-black" : "text-white/50 hover:text-white"
               )}
             >
-              Choose {plan.name}
+              Annual
+              <span className={cn(
+                "text-[10px] font-black px-2 py-0.5 rounded-full",
+                billing === 'annual' ? "bg-orange-500 text-white" : "bg-orange-500/20 text-orange-400"
+              )}>SAVE 40%</span>
             </button>
           </div>
-        ))}
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {PLANS.map((plan) => {
+            const price = billing === 'annual' ? plan.annualPrice : plan.monthlyPrice;
+            const isFree = plan.monthlyPrice === 0;
+            return (
+              <div
+                key={plan.name}
+                className={cn(
+                  "p-8 rounded-3xl border transition-all duration-300 flex flex-col",
+                  plan.popular ? "bg-orange-500/10 border-orange-500/50 scale-105" : "bg-white/5 border-white/10"
+                )}
+              >
+                {plan.popular && (
+                  <span className="inline-block text-[10px] font-black uppercase tracking-widest bg-orange-500 text-white px-3 py-1 rounded-full mb-4 w-fit">
+                    Most Popular
+                  </span>
+                )}
+                <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-4xl font-bold text-white">${price}</span>
+                  <span className="text-white/40">/{isFree ? 'forever' : 'month'}</span>
+                </div>
+                {billing === 'annual' && !isFree && (
+                  <p className="text-xs text-orange-400 mb-6">Billed ${plan.annualTotal}/year · Save ${((plan.monthlyPrice - plan.annualPrice!) * 12)}/yr</p>
+                )}
+                {(billing === 'monthly' || isFree) && <div className="mb-6" />}
+                <ul className="space-y-4 mb-8 flex-1">
+                  {plan.features.map(f => (
+                    <li key={f} className="flex items-center gap-3 text-sm text-white/80">
+                      <CheckCircle2 className="w-4 h-4 text-orange-500 shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => onSelect({ ...plan, billingPeriod: billing, price })}
+                  className={cn(
+                    "w-full py-3 rounded-xl font-bold transition-all",
+                    plan.popular ? "bg-orange-500 text-white hover:bg-orange-600" : "bg-white/10 text-white hover:bg-white/20"
+                  )}
+                >
+                  {plan.cta}
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 const Onboarding = ({ onComplete }: { onComplete: (niche: string) => void }) => {
   const [niche, setNiche] = useState('');
@@ -376,54 +438,90 @@ const Onboarding = ({ onComplete }: { onComplete: (niche: string) => void }) => 
 };
 
 const Checkout = ({ plan, onComplete }: { plan: any, onComplete: () => void }) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const isAnnual = plan.billingPeriod === 'annual';
+
+  const handleStripeCheckout = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planName: plan.name,
+          billingPeriod: plan.billingPeriod || 'monthly',
+          priceMonthly: plan.monthlyPrice,
+          priceAnnual: plan.annualPrice,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create checkout session');
+      window.location.href = data.url;
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Please try again.');
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen pt-32 pb-20 px-4">
       <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-12">
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-        >
-          <h2 className="text-3xl font-bold mb-8 text-white">Complete your subscription</h2>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          <h2 className="text-3xl font-bold mb-2 text-white">Complete your subscription</h2>
+          <p className="text-white/40 mb-8">You'll be redirected to Stripe's secure checkout.</p>
           <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6">
-            <div>
-              <label className="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">Card Number</label>
-              <input type="text" placeholder="•••• •••• •••• ••••" className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-orange-500/50" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">Expiry</label>
-                <input type="text" placeholder="MM/YY" className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-orange-500/50" />
+            <div className="flex items-center gap-4 p-4 bg-orange-500/5 border border-orange-500/20 rounded-2xl">
+              <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center">
+                <Zap className="w-6 h-6 text-orange-500" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">CVC</label>
-                <input type="text" placeholder="•••" className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-orange-500/50" />
+                <div className="font-bold text-white">{plan.name} Plan</div>
+                <div className="text-sm text-white/40">
+                  ${plan.price}/mo · {isAnnual ? 'Billed annually' : 'Billed monthly'}
+                </div>
               </div>
             </div>
-            <button 
-              onClick={onComplete}
-              className="w-full bg-orange-500 py-4 rounded-2xl font-bold text-lg hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20"
+            {error && (
+              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {error}
+              </div>
+            )}
+            <button
+              onClick={handleStripeCheckout}
+              disabled={loading}
+              className="w-full bg-orange-500 py-4 rounded-2xl font-bold text-lg hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              Pay ${plan.price} & Start Growing
+              {loading ? (
+                <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Redirecting to Stripe...</>
+              ) : (
+                <>Pay ${isAnnual ? plan.annualTotal : plan.price * 12} & Start Growing</>
+              )}
             </button>
-            <p className="text-center text-xs text-white/20">Secure payment powered by Stripe</p>
+            <p className="text-center text-xs text-white/20">🔒 Secure payment powered by Stripe</p>
           </div>
         </motion.div>
 
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="bg-white/5 border border-white/10 rounded-3xl p-8 h-fit"
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white/5 border border-white/10 rounded-3xl p-8 h-fit">
           <h3 className="text-xl font-bold mb-6">Order Summary</h3>
-          <div className="flex justify-between mb-4">
+          <div className="flex justify-between mb-2">
             <span className="text-white/60">{plan.name} Plan</span>
             <span className="font-bold">${plan.price}/mo</span>
           </div>
+          {isAnnual && (
+            <div className="flex justify-between mb-2 text-sm">
+              <span className="text-white/40">Billed annually</span>
+              <span className="text-orange-400">${plan.annualTotal}/yr</span>
+            </div>
+          )}
           <div className="border-t border-white/10 pt-4 mb-8">
             <div className="flex justify-between font-bold text-xl">
-              <span>Total</span>
-              <span>${plan.price}</span>
+              <span>Total today</span>
+              <span>${isAnnual ? plan.annualTotal : plan.price}</span>
             </div>
+            {isAnnual && <p className="text-xs text-orange-400 mt-1">You save ${(plan.monthlyPrice - plan.annualPrice) * 12}/year vs monthly</p>}
           </div>
           <ul className="space-y-3">
             {plan.features.map((f: string) => (
@@ -1548,19 +1646,50 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Handle Stripe payment redirect
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+    const paidPlanName = params.get('plan');
+    const paidPeriod = params.get('period');
+    if (paymentStatus === 'success' && paidPlanName) {
+      window.history.replaceState({}, '', '/');
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
+        // Handle Stripe success — record plan in Firestore
+        if (paymentStatus === 'success' && paidPlanName) {
+          try {
+            await setDoc(doc(db, 'users', firebaseUser.uid), {
+              plan: paidPlanName,
+              billingPeriod: paidPeriod || 'monthly',
+              planActivatedAt: serverTimestamp(),
+            }, { merge: true });
+          } catch {}
+          setView('dashboard');
+          setIsAuthLoading(false);
+          return;
+        }
+
         // Fetch user profile
         try {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          // If user just logged in with a pending paid plan, go to checkout
+          const pendingPlan = (window as any).__pendingPlan;
+          if (pendingPlan) {
+            delete (window as any).__pendingPlan;
+            setSelectedPlan(pendingPlan);
+            setView('checkout');
+            setIsAuthLoading(false);
+            return;
+          }
           if (userDoc.exists()) {
             const data = userDoc.data();
             setUserNiche(data.niche || '');
             setSelectedPlan(data.plan ? { name: data.plan } : null);
             setView('dashboard');
           } else {
-            // New user, maybe they haven't finished onboarding
             if (view === 'landing') setView('onboarding');
           }
         } catch (error) {
@@ -1616,11 +1745,23 @@ export default function App() {
   };
 
   const handlePlanSelect = (plan: any) => {
+    if (plan.monthlyPrice === 0) {
+      // Free plan — just sign up / go to dashboard
+      if (user) {
+        setView('dashboard');
+      } else {
+        openSignUp();
+      }
+      return;
+    }
+    // Paid plan — must be logged in
     setSelectedPlan(plan);
     if (user) {
-      setView('onboarding');
+      setView('checkout');
     } else {
-      openSignUp();
+      (window as any).__pendingPlan = plan;
+      setLoginModalInitialSignUp(true);
+      setIsLoginOpen(true);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
