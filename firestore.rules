@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, email format)
+    //   - displayName: string (optional)
+    //   - niche: string (optional)
+    //   - plan: string (optional, enum: Starter, Pro, Agency)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: analysis_history
+    // Document ID: {analysisId}
+    // Fields:
+    //   - uid: string (required)
+    //   - type: string (required, enum: video, channel)
+    //   - url: string (required)
+    //   - result: map (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: newsletter_subscriptions
+    // Document ID: {email}
+    // Fields:
+    //   - email: string (required, email format)
+    //   - subscribedAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "allansengo10@gmail.com" && request.auth.token.email_verified == true
+      );
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             (!('plan' in data) || data.plan in ['Starter', 'Pro', 'Agency']);
+    }
+
+    function isValidAnalysis(data) {
+      return data.keys().hasAll(['uid', 'type', 'url', 'result', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.type in ['video', 'channel'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    request.resource.data.email == resource.data.email;
+    }
+
+    match /analysis_history/{analysisId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidAnalysis(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /newsletter_subscriptions/{email} {
+      allow read: if isAdmin();
+      allow create: if isValidEmail(request.resource.data.email);
+    }
+  }
+}

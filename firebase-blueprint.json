@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user-specific data including their niche and subscription plan.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique ID of the user." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "niche": { "type": "string", "description": "The video niche selected during onboarding." },
+        "plan": { "type": "string", "enum": ["Starter", "Pro", "Agency"], "description": "The user's current subscription plan." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the profile was created." }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "AnalysisHistory": {
+      "title": "Analysis History",
+      "description": "Stores the history of video and channel analyses performed by the user.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The ID of the user who performed the analysis." },
+        "type": { "type": "string", "enum": ["video", "channel"], "description": "The type of analysis." },
+        "url": { "type": "string", "description": "The URL analyzed." },
+        "result": { "type": "object", "description": "The result of the analysis." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the analysis was performed." }
+      },
+      "required": ["uid", "type", "url", "result", "createdAt"]
+    },
+    "NewsletterSubscription": {
+      "title": "Newsletter Subscription",
+      "description": "Stores email addresses subscribed to the newsletter.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "description": "The subscribed email address." },
+        "subscribedAt": { "type": "string", "format": "date-time", "description": "When the subscription occurred." }
+      },
+      "required": ["email", "subscribedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/analysis_history/{analysisId}": {
+      "schema": "AnalysisHistory",
+      "description": "History of analyses performed."
+    },
+    "/newsletter_subscriptions/{email}": {
+      "schema": "NewsletterSubscription",
+      "description": "Newsletter subscription records."
+    }
+  }
+}
