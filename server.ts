@@ -152,6 +152,43 @@ app.get("/api/youtube/channel", async (req, res) => {
   }
 });
 
+// Newsletter subscription via Mailchimp
+app.post("/api/subscribe", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "Email required" });
+
+  const MAILCHIMP_API_KEY = process.env.MAILCHIMP_API_KEY;
+  const MAILCHIMP_LIST_ID = process.env.MAILCHIMP_LIST_ID;
+
+  if (!MAILCHIMP_API_KEY || !MAILCHIMP_LIST_ID) {
+    return res.status(500).json({ error: "Mailchimp not configured. Add MAILCHIMP_API_KEY and MAILCHIMP_LIST_ID to environment secrets." });
+  }
+
+  // Extract data center from API key (format: key-dc, e.g. abc123-us1)
+  const dc = MAILCHIMP_API_KEY.split('-').pop();
+  if (!dc) return res.status(500).json({ error: "Invalid Mailchimp API key format" });
+
+  try {
+    const response = await axios.post(
+      `https://${dc}.api.mailchimp.com/3.0/lists/${MAILCHIMP_LIST_ID}/members`,
+      { email_address: email, status: "subscribed" },
+      {
+        auth: { username: "anystring", password: MAILCHIMP_API_KEY },
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+    res.json({ success: true, id: (response.data as any).id });
+  } catch (error: any) {
+    const detail = error.response?.data?.detail || error.message;
+    // Mailchimp returns 400 if already subscribed — treat as success
+    if (error.response?.data?.title === "Member Exists") {
+      return res.json({ success: true, alreadySubscribed: true });
+    }
+    console.error("Mailchimp error:", detail);
+    res.status(500).json({ error: detail });
+  }
+});
+
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

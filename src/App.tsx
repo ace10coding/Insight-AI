@@ -1532,7 +1532,8 @@ export default function App() {
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
-  const [showWelcomeEmail, setShowWelcomeEmail] = useState(false);
+  const [subscribeSuccess, setSubscribeSuccess] = useState(false);
+  const [subscribeError, setSubscribeError] = useState('');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginModalInitialSignUp, setLoginModalInitialSignUp] = useState(false);
 
@@ -1578,15 +1579,28 @@ export default function App() {
     e.preventDefault();
     if (!newsletterEmail) return;
     setIsSubscribing(true);
+    setSubscribeError('');
     try {
+      // Save to Firestore
       await setDoc(doc(db, 'newsletter_subscriptions', newsletterEmail), {
         email: newsletterEmail,
         subscribedAt: serverTimestamp()
       });
-      setShowWelcomeEmail(true);
+      // Send to Mailchimp via backend
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newsletterEmail })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Subscription failed');
+      }
+      setSubscribeSuccess(true);
       setNewsletterEmail('');
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'newsletter_subscriptions');
+      setTimeout(() => setSubscribeSuccess(false), 5000);
+    } catch (error: any) {
+      setSubscribeError(error.message || 'Something went wrong. Please try again.');
     } finally {
       setIsSubscribing(false);
     }
@@ -1734,70 +1748,38 @@ export default function App() {
                     <div className="w-full md:w-80 bg-white/5 border border-white/10 p-8 rounded-3xl">
                       <h3 className="font-bold mb-4">Join our Newsletter</h3>
                       <p className="text-xs text-white/40 mb-6">Get weekly outlier reports and AI growth tips delivered to your inbox.</p>
-                      <form onSubmit={handleSubscribe}>
-                        <input 
-                          type="email" 
-                          required
-                          placeholder="Email address" 
-                          value={newsletterEmail}
-                          onChange={(e) => setNewsletterEmail(e.target.value)}
-                          className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm mb-4 focus:outline-none focus:border-orange-500/50" 
-                        />
-                        <button 
-                          type="submit"
-                          disabled={isSubscribing}
-                          className="w-full bg-orange-500 py-3 rounded-xl font-bold text-sm disabled:opacity-50"
-                        >
-                          {isSubscribing ? 'Subscribing...' : 'Subscribe'}
-                        </button>
-                      </form>
+                      {subscribeSuccess ? (
+                        <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3 text-sm text-orange-400 font-medium">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          Email sent · Mailchimp Synced
+                        </div>
+                      ) : (
+                        <form onSubmit={handleSubscribe}>
+                          <input 
+                            type="email" 
+                            required
+                            placeholder="Email address" 
+                            value={newsletterEmail}
+                            onChange={(e) => setNewsletterEmail(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm mb-4 focus:outline-none focus:border-orange-500/50" 
+                          />
+                          {subscribeError && (
+                            <p className="text-xs text-red-400 mb-3">{subscribeError}</p>
+                          )}
+                          <button 
+                            type="submit"
+                            disabled={isSubscribing}
+                            className="w-full bg-orange-500 py-3 rounded-xl font-bold text-sm disabled:opacity-50"
+                          >
+                            {isSubscribing ? 'Subscribing...' : 'Subscribe'}
+                          </button>
+                        </form>
+                      )}
                     </div>
                   </div>
                 </div>
               </section>
 
-              <AnimatePresence>
-                {showWelcomeEmail && (
-                  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                    <motion.div 
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-8 max-w-lg w-full shadow-2xl"
-                    >
-                      <div className="flex items-center gap-3 text-orange-500 mb-6">
-                        <div className="w-10 h-10 bg-orange-500/10 rounded-full flex items-center justify-center">
-                          <Bell className="w-5 h-5" />
-                        </div>
-                        <h3 className="text-xl font-bold">Welcome Email Sent!</h3>
-                      </div>
-                      
-                      <div className="bg-black/40 border border-white/5 rounded-2xl p-6 mb-6">
-                        <div className="text-xs text-white/20 uppercase tracking-widest mb-4 flex items-center justify-between">
-                          <span>Email Preview</span>
-                          <span className="text-[10px] bg-orange-500/20 text-orange-500 px-2 py-0.5 rounded">Mailchimp Synced</span>
-                        </div>
-                        <h4 className="text-lg font-bold text-white mb-2">Welcome to Insight AI! 🚀</h4>
-                        <p className="text-sm text-white/60 leading-relaxed">
-                          Hey there! Thanks for joining the Insight AI inner circle. <br /><br />
-                          You're now part of an elite group of creators using AI to dominate the algorithm. Every Tuesday, we'll send you: <br /><br />
-                          • Top 5 Outlier Videos in the tech niche <br />
-                          • 10 High-CTR Title Templates <br />
-                          • Exclusive AI Hook Strategies <br /><br />
-                          Ready to grow? Head back to your dashboard and start analyzing.
-                        </p>
-                      </div>
-
-                      <button 
-                        onClick={() => setShowWelcomeEmail(false)}
-                        className="w-full bg-white text-black py-3 rounded-xl font-bold hover:bg-white/90 transition-all"
-                      >
-                        Got it, thanks!
-                      </button>
-                    </motion.div>
-                  </div>
-                )}
-              </AnimatePresence>
 
               <footer className="py-12 border-t border-white/10 text-center text-white/20 text-sm">
                 &copy; 2026 VidMetrics. All rights reserved. Built for creators.
