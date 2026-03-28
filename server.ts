@@ -94,52 +94,108 @@ app.post('/api/create-checkout-session', async (req, res) => {
   }
 });
 
-// ── Selzy: Add subscriber ─────────────────────────────────────────────────────
-app.post('/api/selzy-subscribe', async (req, res) => {
-  const { email, listId } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email required' });
+// ── Selzy helpers ─────────────────────────────────────────────────────────────
+const SELZY_BASE = 'https://api.selzy.com/en/api';
+const SELZY_LIST_ID = '1'; // "My first list" from getLists
 
+async function selzySubscribe(email: string): Promise<{ personId?: number; error?: string }> {
   try {
-    const response = await axios.post(
-      'https://api.selzy.com/en/api/addContacts.json',
-      {
-        apiKey: SELZY_API_KEY,
-        listIds: listId ? [listId] : [],
-        contacts: [{ email }],
-        overwriteExisting: true,
-      }
-    );
-    const data = response.data as any;
-    if (data.error) throw new Error(data.error);
-    res.json({ success: true });
-  } catch (error: any) {
-    const detail = error.response?.data?.error || error.message;
-    console.error('Selzy error:', detail);
-    res.status(500).json({ error: detail });
+    const params = new URLSearchParams({
+      format: 'json',
+      api_key: SELZY_API_KEY,
+      list_ids: SELZY_LIST_ID,
+      'fields[email]': email,
+    });
+    const res = await axios.post(`${SELZY_BASE}/subscribe?${params.toString()}`);
+    const data = res.data as any;
+    if (data.error) return { error: data.error };
+    return { personId: data.result?.person_id };
+  } catch (err: any) {
+    return { error: err.response?.data?.error || err.message };
   }
-});
+}
 
-// ── Newsletter subscription (Mailchimp + Selzy) ───────────────────────────────
+async function selzySendEmail(to: string, subject: string, htmlBody: string): Promise<{ id?: string; error?: string }> {
+  try {
+    const params = new URLSearchParams({
+      format: 'json',
+      api_key: SELZY_API_KEY,
+      email: to,
+      subject,
+      body: htmlBody,
+    });
+    const res = await axios.post(`${SELZY_BASE}/sendEmail?${params.toString()}`);
+    const data = res.data as any;
+    if (data.error || data.code === 'invalid_arg') return { error: data.error };
+    return { id: data.result?.email_id };
+  } catch (err: any) {
+    return { error: err.response?.data?.error || err.message };
+  }
+}
+
+const WELCOME_HTML = (email: string) => `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:Inter,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 20px;">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#111;border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:40px 40px 30px;text-align:center;background:linear-gradient(135deg,#111 0%,#1a1a1a 100%);">
+          <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:24px;">
+            <span style="background:#f97316;border-radius:8px;padding:8px;font-size:20px;">⚡</span>
+            <span style="color:#fff;font-size:20px;font-weight:700;letter-spacing:-0.5px;">Insight AI</span>
+          </div>
+          <h1 style="color:#fff;font-size:28px;font-weight:800;margin:0 0 12px;line-height:1.2;">
+            You're in! 🎉
+          </h1>
+          <p style="color:#9ca3af;font-size:16px;margin:0 0 28px;line-height:1.6;">
+            Thanks for joining the Insight AI newsletter. You'll be the first to know about new features, growth tactics, and YouTube creator insights.
+          </p>
+          <a href="https://insightai.io" style="display:inline-block;background:#f97316;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px;">
+            Explore Insight AI →
+          </a>
+        </td></tr>
+        <tr><td style="padding:32px 40px;border-top:1px solid #222;">
+          <p style="color:#6b7280;font-size:13px;margin:0;text-align:center;">
+            You subscribed with ${email}. 
+            If this was a mistake, simply ignore this email.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+// ── Newsletter subscription ───────────────────────────────────────────────────
 app.post("/api/subscribe", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Email required" });
 
-  const MAILCHIMP_API_KEY = process.env.MAILCHIMP_API_KEY;
-  const MAILCHIMP_LIST_ID = process.env.MAILCHIMP_LIST_ID;
-
-  // Try Selzy first
-  try {
-    await axios.post('https://api.selzy.com/en/api/addContacts.json', {
-      apiKey: SELZY_API_KEY,
-      listIds: [],
-      contacts: [{ email }],
-      overwriteExisting: true,
-    });
-  } catch (err: any) {
-    console.error('Selzy subscribe error:', err.message);
+  // 1. Add to Selzy list
+  const subResult = await selzySubscribe(email);
+  if (subResult.error) {
+    console.error('Selzy subscribe error:', subResult.error);
+  } else {
+    console.log(`Selzy: added contact person_id=${subResult.personId}`);
   }
 
-  // Also try Mailchimp if configured
+  // 2. Send welcome email via Selzy
+  const mailResult = await selzySendEmail(
+    email,
+    'Welcome to Insight AI! 🎉',
+    WELCOME_HTML(email),
+  );
+  if (mailResult.error) {
+    console.error('Selzy sendEmail error:', mailResult.error);
+  } else {
+    console.log(`Selzy: welcome email sent id=${mailResult.id}`);
+  }
+
+  // 3. Also try Mailchimp if configured
+  const MAILCHIMP_API_KEY = process.env.MAILCHIMP_API_KEY;
+  const MAILCHIMP_LIST_ID = process.env.MAILCHIMP_LIST_ID;
   if (MAILCHIMP_API_KEY && MAILCHIMP_LIST_ID) {
     const dc = MAILCHIMP_API_KEY.split('-').pop();
     try {
