@@ -265,12 +265,6 @@ const Navbar = ({
           Pricing
         </button>
         <button
-          onClick={() => onNavClick("outliers")}
-          className="hover:text-white transition-colors"
-        >
-          Outliers
-        </button>
-        <button
           onClick={() => onNavClick("resources")}
           className="hover:text-white transition-colors"
         >
