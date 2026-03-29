@@ -8,7 +8,7 @@ import Stripe from "stripe";
 dotenv.config();
 
 const app = express();
-const PORT = 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 const SELZY_API_KEY = process.env.SELZY_API_KEY || '6t48ekffiyhpkuuuhq1bdxnxemqmb3e597d5hzzo';
 
