@@ -2338,7 +2338,7 @@ export default function App() {
                       {subscribeSuccess ? (
                         <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3 text-sm text-orange-400 font-medium">
                           <CheckCircle2 className="w-4 h-4 shrink-0" />
-                          Email sent · Mailchimp Synced
+                          Email sent · Selzy Integrated
                         </div>
                       ) : (
                         <form onSubmit={handleSubscribe}>
